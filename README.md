@@ -3,6 +3,6 @@
 Tensorflow Implementation of 《Open Set Domain Adaptation by Backpropagation》
 
 
-Usage:
+## Usage:
 
 python osda_train.py
