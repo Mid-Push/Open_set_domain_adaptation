@@ -131,6 +131,7 @@ class LeNetModel(object):
 	print 'p(y=K+1) ', p_kone.get_shape()
 
 	L_adv=0.5*tf.reduce_mean(tf.log(p_kone))+0.5*tf.reduce_mean((tf.log(1.0-(p_kone))))
+        #------------------------------The flip sign is important to my implementation-----------------------------------------
 	self.L_adv=-L_adv
 	
 	'''
