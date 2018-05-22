@@ -131,7 +131,7 @@ class LeNetModel(object):
 	print 'p(y=K+1) ', p_kone.get_shape()
 
 	L_adv=0.5*tf.reduce_mean(tf.log(p_kone))+0.5*tf.reduce_mean((tf.log(1.0-(p_kone))))
-	self.L_adv=L_adv
+	self.L_adv=-L_adv
 	
 	'''
 	self.Semanticloss=tf.constant(0.0)
