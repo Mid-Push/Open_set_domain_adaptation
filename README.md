@@ -7,7 +7,7 @@ Tensorflow Implementation of 《Open Set Domain Adaptation by Backpropagation》
 
 python osda_train.py
 
-## Major Difference:
+## Major Difference: Flip the sign of L_adv(xt)
 
 ### paper: 
 Ladv(xt) = tlog(p(y = K + 1|xt)) + (1 − t) log(1 − p(y = K + 1|xt)
