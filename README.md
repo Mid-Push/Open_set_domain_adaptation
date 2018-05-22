@@ -24,5 +24,5 @@ C: Ls(xs, ys) + Ladv(xt)
 
 G: Ls(xs, ys) - Ladv(xt)
 
-## Results:
+## Results: (OS performance is reported,i.e., 6 classes classification--[0,1,2,3,4,unknown])
 ![alt text](results/test_accuracy.png "Test Accuracy")
