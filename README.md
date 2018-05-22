@@ -23,3 +23,6 @@ Ladv(xt) = -(tlog(p(y = K + 1|xt)) + (1 − t) log(1 − p(y = K + 1|xt))
 C: Ls(xs, ys) + Ladv(xt)
 
 G: Ls(xs, ys) - Ladv(xt)
+
+## Results:
+![alt text](results/test_accuracy.png "Test Accuracy")
