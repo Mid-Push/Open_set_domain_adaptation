@@ -2,6 +2,7 @@
 
 Tensorflow Implementation of 《Open Set Domain Adaptation by Backpropagation》
 
+On SVHN->MNIST and MNIST->USPS, USPS->MNIST
 
 ## Usage:
 
