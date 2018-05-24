@@ -8,7 +8,7 @@ On SVHN->MNIST and MNIST->USPS, USPS->MNIST
 
 python osda_train.py
 
-## Major Difference: Flip the sign of L_adv(xt)
+## Major Difference: Flip the sign of L_adv(xt) (After confirmation with the authors, my thoughts are correct!)
 
 ### paper: 
 Ladv(xt) = tlog(p(y = K + 1|xt)) + (1 − t) log(1 − p(y = K + 1|xt)
