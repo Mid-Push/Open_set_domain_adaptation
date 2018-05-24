@@ -26,9 +26,14 @@ C: Ls(xs, ys) + Ladv(xt)
 G: Ls(xs, ys) - Ladv(xt)
 
 ## Results:
-(ALL performance is reported,i.e., 6 classes classification--[0,1,2,3,4,unknown])
+# my implementation
 
-I have obatined ALL(overall accuracy) of near 0.60 for SVHN->MNIST while 0.71 is reported in paper. I'm trying to fix this gap at present. Any advice is welcome.  
+OS 85.7 OS* 85.6 ALL 85.8 UNK 85.9
+# paper
 
-![alt text](results/test_accuracy.png "Test Accuracy")
+OS 92.3 OS* 91.2 ALL 94.4 UNK 97.6
+
+ I'm trying to fix this gap at present. Any advice is welcome.  
+
+![alt text](results/um.png "ALL Accuracy")
 ![alt text](results/l_adv.png "Test Accuracy")
