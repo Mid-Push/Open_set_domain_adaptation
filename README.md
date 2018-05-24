@@ -36,4 +36,4 @@ OS 92.3 OS* 91.2 ALL 94.4 UNK 97.6
  I'm trying to fix this gap at present. Any advice is welcome.  
 
 ![alt text](results/um.png "ALL Accuracy")
-![alt text](results/l_adv.png "Test Accuracy")
+![alt text](results/ladv.png "Test Accuracy")
