@@ -12,28 +12,30 @@ def augment(x,domain='source'):
 
 class LeNetModel(object):
 
-    def __init__(self, num_classes=1000, is_training=True,image_size=28,dropout_keep_prob=0.5):
+    def __init__(self, num_classes=1000, num_channels=3,is_training=True,image_size=28,dropout_keep_prob=0.5):
         self.num_classes = num_classes
         self.dropout_keep_prob = dropout_keep_prob
 	self.default_image_size=image_size
         self.is_training=is_training
-        self.num_channels=3
+        self.num_channels=num_channels
         self.mean=None
         self.bgr=False
         self.range=None
 
     def inference(self, x, domain='source',training=False):
         # 1st Layer: Conv (w ReLu) -> Pool -> Lrn
-        conv1 = conv(x, 5, 5, 64, 1, 1, padding='VALID',bn=True, name='conv1')
+        conv1 = conv(x, 5, 5, 20, 1, 1, padding='VALID',bn=True, name='conv1')
         pool1 = max_pool(conv1, 2, 2, 2, 2, padding='VALID', name='pool1')
 
 	print 'conv1 ',conv1.get_shape()
-	#print 'pool1 ',pool1.get_shape()
+	print 'pool1 ',pool1.get_shape()
         # 2nd Layer: Conv (w ReLu) -> Pool -> Lrn with 2 groups
-        conv2 = conv(pool1, 5, 5, 64, 1, 1, padding='VALID',bn=True,name='conv2')
+        conv2 = conv(pool1, 5, 5, 50, 1, 1, padding='VALID',bn=True,name='conv2')
         pool2 = max_pool(conv2, 2, 2, 2, 2, padding='VALID', name='pool2')
 	print 'conv2 ',conv2.get_shape()
-        '''
+        
+	
+	'''
 	conv3 = conv(conv2, 3, 3, 128, 2, 2, padding='VALID',bn=True,name='conv3')
 	print 'conv3 ',conv3.get_shape()
 	
@@ -45,6 +47,7 @@ class LeNetModel(object):
         # 6th Layer: Flatten -> FC (w ReLu) -> Dropout
         flattened = tf.contrib.layers.flatten(pool2)
         self.flattened=flattened
+	flattened=tf.nn.dropout(flattened,self.dropout_keep_prob)
 	fc1 = fc(flattened, flattened.get_shape()[-1], 500, bn=True,name='fc1')
 	#fc1=augment(fc1,domain=domain)
 	#fcmid=fc(fc1,100,100,bn=True,name='fcmid')
@@ -127,13 +130,21 @@ class LeNetModel(object):
 	'''
 	
 	#-------------------------construct L_adv(xt) using "open set domain adaptation by backpropagation"---------------------------------------------
+	#--------------------- First version of L_adv -------------------------------------------------------
 	p_kone=tf.gather(tf.nn.softmax(hxt),indices=[self.num_classes-1],axis=1)
-	print 'p(y=K+1) ', p_kone.get_shape()
-
-	L_adv=0.5*tf.reduce_mean(tf.log(p_kone))+0.5*tf.reduce_mean((tf.log(1.0-(p_kone))))
-        #------------------------------The flip sign is important to my implementation-----------------------------------------
-	self.L_adv=-L_adv
+	print p_kone.get_shape()
+	tf.summary.histogram('p_kone ',p_kone)
+	tf.summary.scalar('reduce_mean p_kone ',tf.reduce_mean(p_kone))
+	L_adv=0.5*tf.reduce_mean(tf.log(p_kone+1e-8))+0.5*tf.reduce_mean((tf.log(1.0-(p_kone)+1e-8)))
 	
+	self.L_adv=-L_adv
+	#---------------------- A second version: use the built-in softmax_cross_entropy---------------------------------------------
+	'''p_knotone=1.0-p_kone
+	p_k_logits=tf.concat(values=[p_kone,p_knotone],axis=1)
+	print 'p(y=K+1) ', p_kone.get_shape()
+	L_adv=tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=p_k_logits,labels=0.5*tf.ones_like(p_k_logits)))
+	self.L_adv=L_adv
+	'''
 	'''
 	self.Semanticloss=tf.constant(0.0)
 	self.Drloss=tf.constant(0.0)
@@ -158,7 +169,6 @@ class LeNetModel(object):
         with tf.variable_scope('reuse_inference') as scope:
 	    y_predict = self.inference(batch_x, training=True)
         self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=y_predict, labels=batch_y))
-	tf.summary.scalar('Closs',self.loss)
         return self.loss
 
     def optimize(self, learning_rate, train_layers,global_step):
@@ -166,7 +176,7 @@ class LeNetModel(object):
 	print train_layers
 	g_list=[v for v in tf.trainable_variables() if v.name.split('/')[1] in ['conv1','conv2','conv3','conv4','fc1','fcmid']]
 	c_list=[v for v in tf.trainable_variables() if v.name.split('/')[1] in ['fc2']]
-	self.Gregloss=0.0005*tf.reduce_mean([tf.nn.l2_loss(x) for x in g_list+c_list if 'weights' in x.name])
+	self.Gregloss=2e-5*tf.reduce_mean([tf.nn.l2_loss(x) for x in g_list+c_list if 'weights' in x.name])
 	
 	g_weights=[v for v in g_list if 'weights' in v.name or 'gamma' in v.name]
 	g_biases=[v for v in g_list if 'biases' in v.name or 'beta' in v.name]
@@ -187,10 +197,8 @@ class LeNetModel(object):
 	#self.F_loss=self.Entropyloss
         Ls_loss=self.loss 
 	L_adv=self.L_adv
-	self.c_loss=Ls_loss+L_adv
-	#+self.Gregloss
-	self.g_loss=Ls_loss-L_adv
-	#+self.Gregloss
+	self.c_loss=Ls_loss+L_adv+self.Gregloss
+	self.g_loss=Ls_loss-L_adv+self.Gregloss
 	
 	tf.summary.scalar('C_loss',self.c_loss)
 	tf.summary.scalar('G_adv',self.g_loss)
@@ -200,10 +208,10 @@ class LeNetModel(object):
 	#+global_step*self.G_loss+self.Gregloss+global_step*self.Entropyloss
 	#+global_step*self.Entropyloss+global_step*self.G_loss
         train_op1=tf.train.AdamOptimizer(learning_rate*1.0,0.9).minimize(self.c_loss, var_list=c_weights)
-        train_op2=tf.train.AdamOptimizer(learning_rate*2.0,0.9).minimize(self.c_loss, var_list=c_biases)
+        train_op2=tf.train.AdamOptimizer(learning_rate*1.0,0.9).minimize(self.c_loss, var_list=c_biases)
         
 	train_op3=tf.train.AdamOptimizer(learning_rate*1.0,0.9).minimize(self.g_loss, var_list=g_weights)
-        train_op4=tf.train.AdamOptimizer(learning_rate*2.0,0.9).minimize(self.g_loss, var_list=g_biases)
+        train_op4=tf.train.AdamOptimizer(learning_rate*1.0,0.9).minimize(self.g_loss, var_list=g_biases)
 		
 	
         #train_op1=tf.train.AdamOptimizer(learning_rate*0.1,beta1=0.5,beta2=0.99).minimize(self.F_loss, var_list=finetune_list)
@@ -242,7 +250,7 @@ def conv(x, filter_height, filter_width, num_filters, stride_y, stride_x, name, 
 
     with tf.variable_scope(name) as scope:
         weights = tf.get_variable('weights', shape=[filter_height, filter_width, input_channels/groups, num_filters],initializer=tf.contrib.layers.xavier_initializer())
-        biases = tf.get_variable('biases', shape=[num_filters])
+        biases = tf.get_variable('biases', shape=[num_filters],initializer=tf.contrib.layers.xavier_initializer())
 
         if groups == 1:
             conv = convolve(x, weights)
@@ -282,7 +290,7 @@ def fc(x, num_in, num_out, name, relu=True,bn=False,bias=True,stddev=0.01):
     with tf.variable_scope(name) as scope:
         #weights = tf.get_variable('weights', initializer=tf.truncated_normal([num_in,num_out],stddev=stddev))
         weights = tf.get_variable('weights', shape=[num_in,num_out],initializer=tf.contrib.layers.xavier_initializer())
-        biases = tf.get_variable('biases',initializer=tf.constant(0.1,shape=[num_out]))
+        biases = tf.get_variable('biases',shape=[num_out],initializer=tf.contrib.layers.xavier_initializer())
         act = tf.matmul(x, weights,name=scope.name)
 	if bias==True:
 	    act=act+biases

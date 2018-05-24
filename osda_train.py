@@ -3,6 +3,7 @@ import numpy as np
 import tensorflow as tf
 import datetime
 from osda_model import LeNetModel
+import metrics
 #from mstnmodel import LeNetModel
 #from svhnmodel import SVHNModel
 #from drcnmodel import DRCNModel
@@ -15,10 +16,10 @@ from preprocessing import preprocessing
 import math
 from tensorflow.contrib.tensorboard.plugins import projector
 
-tf.app.flags.DEFINE_float('learning_rate', 2e-4, 'Learning rate for adam optimizer')
+tf.app.flags.DEFINE_float('learning_rate', 2e-5, 'Learning rate for adam optimizer')
 tf.app.flags.DEFINE_float('dropout_keep_prob', 0.5, 'Dropout keep probability')
 tf.app.flags.DEFINE_integer('num_epochs', 100000, 'Number of epochs for training')
-tf.app.flags.DEFINE_integer('batch_size', 100, 'Batch size')
+tf.app.flags.DEFINE_integer('batch_size', 128, 'Batch size')
 tf.app.flags.DEFINE_string('train_layers', 'fc8,fc7,fc6,conv5,conv4,conv3,conv2,conv1', 'Finetuning layers, seperated by commas')
 tf.app.flags.DEFINE_string('multi_scale', '256,257', 'As preprocessing; scale the image randomly between 2 numbers and crop randomly at networs input size')
 tf.app.flags.DEFINE_string('train_root_dir', '../training', 'Root directory to put the training data')
@@ -27,20 +28,26 @@ tf.app.flags.DEFINE_integer('log_step', 10000, 'Logging period in terms of itera
 #-------------------------open set domain adaptation----------------------------------------
 NUM_CLASSES = 6
 
-TRAIN_FILE='svhn'
+TRAIN_FILE='usps'
 TEST_FILE='mnist'
 print TRAIN_FILE+'  --------------------------------------->   '+TEST_FILE
 print TRAIN_FILE+'  --------------------------------------->   '+TEST_FILE
 print TRAIN_FILE+'  --------------------------------------->   '+TEST_FILE
+
 '''
 np.random.seed(hash('mnist')&0xffffffff)
 mnist_select=np.random.choice(60000,size=60000,replace=False)
 np.random.seed(hash('usps')&0xffffffff)
 svhn_select=np.random.choice(73257,size=73257,replace=False)
 '''
-TRAIN=SVHN('data/svhn',split='train',unk=False,shuffle=True)
+#TRAIN=SVHN('data/svhn',split='train',unk=False,shuffle=True)
+#VALID=MNIST('data/mnist',split='train',unk=True,shuffle=True)
+#TEST=MNIST('data/mnist',split='train',unk=True,shuffle=False)
+
+TRAIN=USPS('data/usps',split='train',unk=False,shuffle=True)
 VALID=MNIST('data/mnist',split='train',unk=True,shuffle=True)
 TEST=MNIST('data/mnist',split='train',unk=True,shuffle=False)
+
 
 
 FLAGS = tf.app.flags.FLAGS
@@ -94,9 +101,9 @@ def main(_):
 
     # Model
     train_layers = FLAGS.train_layers.split(',')
-    model = LeNetModel(num_classes=NUM_CLASSES, image_size=32,is_training=is_training,dropout_keep_prob=dropout_keep_prob)
+    model = LeNetModel(num_classes=NUM_CLASSES, image_size=28,num_channels=1,is_training=is_training,dropout_keep_prob=dropout_keep_prob)
     # Placeholders
-    x_s = tf.placeholder(tf.float32, [None, 32, 32, 3],name='x')
+    x_s = tf.placeholder(tf.float32, [None, 16, 16, 1],name='x')
     x_t = tf.placeholder(tf.float32, [None, 28, 28, 1],name='xt')
     x=preprocessing(x_s,model)
     xt=preprocessing(x_t,model)
@@ -121,12 +128,23 @@ def main(_):
     correct_pred = tf.equal(tf.argmax(model.score, 1), tf.argmax(yt, 1))
     correct=tf.reduce_sum(tf.cast(correct_pred,tf.float32))
     accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
-    
-    update_op = model.optimize(decay_learning_rate,train_layers,adlamb)
+
+    #------------ A series of metrics for evaluation: OS,OS*,ALL,UNK----------------------------------
+    target_predict=model.score
+    with tf.variable_scope('metrics') as scope:
+    	os_acc,os_update_op=metrics.OS(hx=target_predict,y=yt,num_classes=NUM_CLASSES)
+    	osstar_acc,osstar_update_op=metrics.OS_star(hx=target_predict,y=yt,num_classes=NUM_CLASSES)
+    	all_acc,all_update_op=metrics.ALL(hx=target_predict,y=yt)
+    	unk_acc,unk_update_op=metrics.UNK(hx=target_predict,y=yt,num_classes=NUM_CLASSES)
+    	metrics_update_op=tf.group(os_update_op,osstar_update_op,all_update_op,unk_update_op)
+    	metrics_variables=[v for v in tf.local_variables() if v.name.startswith('metrics')]
+	reset_ops=[v.initializer for v in metrics_variables]
+	print metrics_variables
+
+    optimizer = model.optimize(decay_learning_rate,train_layers,adlamb)
 	
     #D_op=model.adoptimize(decay_learning_rate,train_layers)
     #optimizer=tf.group(update_op,D_op)
-    optimizer=update_op    
 
     train_writer=tf.summary.FileWriter('./log/tensorboard')
     train_writer.add_graph(tf.get_default_graph())
@@ -145,9 +163,10 @@ def main(_):
     print tf.trainable_variables(),'   ',len(tf.trainable_variables())
     #print '============================GLOBAL VARIABLES ======================================'
     #print tf.global_variables()
-
+	
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
+        sess.run(tf.local_variables_initializer())
 	saver=tf.train.Saver()
 	#saver.restore(sess,'log/checkpoint')
         # Load the pretrained weights
@@ -178,10 +197,10 @@ def main(_):
             step += 1
             if gd%250==0:
 		epoch=gd/(72357/100)
+                print("{} Start validation".format(datetime.datetime.now()))
 	        print 'lambda: ',lamb
 	        print 'rate: ',rate
 		print 'Epoch {0:<10} Step {1:<10} C_loss {2:<10} Advloss {3:<10}'.format(epoch,gd,closs,advloss)
-                print("{} Start validation".format(datetime.datetime.now()))
 		#print 'source decay',sdecay
 		#print 'target_decay',tdecay
                 test_acc = 0.
@@ -191,8 +210,12 @@ def main(_):
                     batch_tx, batch_ty = TEST.next_batch(5000)
 		    #print TEST.pointer,'   ',TEST.shuffle
                     acc = sess.run(correct, feed_dict={x_t: batch_tx, yt: batch_ty, is_training:True,dropout_keep_prob: 1.})
-                    test_acc += acc
+                    sess.run(metrics_update_op, feed_dict={x_t: batch_tx, yt: batch_ty, is_training:True,dropout_keep_prob: 1.})
+                    osacc,osstaracc,allacc,unkacc = sess.run([os_acc,osstar_acc,all_acc,unk_acc], feed_dict={x_t: batch_tx, yt: batch_ty, is_training:True,dropout_keep_prob: 1.})
+		    test_acc += acc
                     test_count += 5000
+		print "OS {0:<10} OS* {1:<10} ALL {2:<10} UNK {3:<10}".format(osacc,osstaracc,allacc,unkacc)
+		sess.run(reset_ops)	
                 print test_acc,test_count
                 test_acc /= test_count
 		if epoch==300:
