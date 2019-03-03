@@ -17,14 +17,14 @@ class USPS:
         'test': 'zip.test.gz'
         }
 
-	def __init__(self,path=None,shuffle=True,known_class=[0,1,2,3,4],unknown_class=[5,6,7,8,9],unk=True,output_size=[28,28],output_channel=1,split='train',select=[]):
-		self.image_shape=(16,16,1)
+	def __init__(self,path=None,shuffle=True,frange=[-1.,1.],known_class=[0,1,2,3,4],unknown_class=[5,6,7,8,9],unk=True,output_size=[28,28],output_channel=1,split='train',select=[]):
+		self.image_shape=[16,16,1]
 		self.label_shape=()	
 		self.path=path
 		self.shuffle=shuffle
 		self.output_size=output_size
 		self.output_channel=output_channel
-		
+		self.frange=frange
 		#-----------key for open set domain adaptation data preprocessing-----------------------------
                 self.unk=unk
                 self.known_class=known_class
@@ -101,7 +101,8 @@ class USPS:
                 	else:
                 	        self.images=known_images
                 	        self.labels=known_labels
-
+		if self.frange==[-1.,1.]:
+			self.images=self.images*2.0-1.
 	def reset_pointer(self):
 		self.pointer=0
 		if self.shuffle:
@@ -137,10 +138,10 @@ class USPS:
 def main():
 	#svhn=USPS(path='data/usps',split='train',select=[2,3,45])
 	#print len(svhn.images)
-	usps=USPS(path='data/usps',split='test')
+	usps=USPS(path='data/usps',frange=[0.,1.],split='test')
 	a,b=usps.next_batch(10)
-	#print a
-	print b
+	print a[0]
+	#print b
 
 if __name__=='__main__':
 	main()

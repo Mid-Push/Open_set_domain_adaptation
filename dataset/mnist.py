@@ -19,13 +19,14 @@ class MNIST:
             'test_images': 't10k-images-idx3-ubyte.gz',
             'test_labels': 't10k-labels-idx1-ubyte.gz',
             }
-	def __init__(self,path=None,shuffle=True,output_size=[28,28],output_channel=1,known_class=[0,1,2,3,4],unknown_class=[5,6,7,8,9],unk=True,split='train',select=[]):
-		self.image_shape=(28,28,1)
+	def __init__(self,path='mnist',shuffle=True,output_size=[28,28],output_channel=1,frange=[-1.,1.0],known_class=[0,1,2,3,4],unknown_class=[5,6,7,8,9],unk=True,split='train',select=[]):
+		self.image_shape=[28,28,1]
 		self.label_shape=()	
 		self.path=path
 		self.shuffle=shuffle
 		self.output_size=output_size
 		self.output_channel=output_channel
+		self.frange=frange
 		self.split=split
 		self.select=select
 		#--------------key for open set domain adaptation----------------------------------
@@ -99,7 +100,8 @@ class MNIST:
 			else:
 				self.images=known_images
 				self.labels=known_labels
-		
+		if self.frange==[-1.,1.]:
+			self.images=self.images*2.0-1.0
 	
 	def reset_pointer(self):
 		self.pointer=0
@@ -140,8 +142,8 @@ class MNIST:
 def main():
 	mnist=MNIST(path='data/mnist')
 	a,b=mnist.next_batch(10)
-	#print a
-	print b
+	print a[0]
+	#print b
 
 if __name__=='__main__':
 	main()

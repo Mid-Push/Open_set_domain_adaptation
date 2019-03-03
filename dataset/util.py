@@ -5,7 +5,6 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-
 def maybe_download(url, dest):
     """Download the url to dest if necessary, optionally checking file
     integrity.

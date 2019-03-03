@@ -4,11 +4,6 @@ Derived from: https://github.com/kratzert/finetune_alexnet_with_tensorflow/
 import tensorflow as tf
 import numpy as np
 import math
-def augment(x,domain='source'):
-	if domain=='source':
-		return tf.concat([x,x,tf.zeros_like(x)],axis=1)
-	if domain=='target':
-		return tf.concat([tf.zeros_like(x),x,-x],axis=1)
 
 class LeNetModel(object):
 
@@ -34,23 +29,6 @@ class LeNetModel(object):
         pool2 = max_pool(conv2, 2, 2, 2, 2, padding='VALID', name='pool2')
 	print 'conv2 ',conv2.get_shape()
         
-	
-	'''
-	conv3 = conv(conv2, 3, 3, 128, 2, 2, padding='VALID',bn=True,name='conv3')
-	print 'conv3 ',conv3.get_shape()
-	
-	conv4 = conv(conv3, 3, 3, 128, 2, 2, padding='VALID',bn=True,name='conv4')
-	print 'conv4 ',conv4.get_shape()
-	'''
-
-
-        # 6th Layer: Flatten -> FC (w ReLu) -> Dropout
-        flattened = tf.contrib.layers.flatten(pool2)
-        self.flattened=flattened
-	flattened=tf.nn.dropout(flattened,self.dropout_keep_prob)
-	fc1 = fc(flattened, flattened.get_shape()[-1], 500, bn=True,name='fc1')
-	#fc1=augment(fc1,domain=domain)
-	#fcmid=fc(fc1,100,100,bn=True,name='fcmid')
 	fc2 = fc(fc1, 500, self.num_classes, relu=False,name='fc2')
 	self.score=fc2
         return fc2

@@ -19,14 +19,15 @@ class SVHN:
             #'extra': 'extra_32x32.mat',
          }
 
-	def __init__(self,path=None,select=[],shuffle=True,output_size=[28,28],output_channel=1,known_class=[0,1,2,3,4],unknown_class=[5,6,7,8,9],unk=True,split='train'):
-		self.image_shape=(32,32,3)
+	def __init__(self,path=None,frange=[-1.,1.],select=[],shuffle=True,output_size=[28,28],output_channel=1,known_class=[0,1,2,3,4],unknown_class=[5,6,7,8,9],unk=True,split='train'):
+		self.image_shape=[32,32,3]
 		self.label_shape=()	
 		self.path=path
 		self.shuffle=shuffle
 		self.output_size=output_size
 		self.output_channel=output_channel
 		self.split=split
+		self.frange=frange
 		self.select=select
 		self.download()
 		self.pointer=0
@@ -101,7 +102,8 @@ class SVHN:
 				self.images=known_images
 				self.labels=known_labels
 		
-			
+		if self.frange==[-1.,1.]:
+			self.images=self.images*2.0-1.0	
 	def reset_pointer(self):
 		self.pointer=0
 		if self.shuffle:
@@ -134,7 +136,7 @@ class SVHN:
 def main():
 	svhn=SVHN(path='data/svhn',unk=True)
 	a,b=svhn.next_batch(10)
-	#print a
+	print a[0]
 	print b
 
 if __name__=='__main__':
