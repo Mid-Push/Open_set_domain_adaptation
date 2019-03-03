@@ -43,7 +43,7 @@ class DALearner:
 			    )
 		loss_gen=(
 			    loss_src
-			    -lamb*loss_adv
+			    -loss_adv
 			    )
 		return loss_class,loss_gen,src_p,trg_p
 		

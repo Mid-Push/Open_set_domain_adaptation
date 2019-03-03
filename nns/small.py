@@ -7,7 +7,7 @@ class lenet:
 	def forward(self,x,enc=True,dec=False,phase=True,keep_prob=0.5,reuse=False,nmc=6):
 		net=tf.identity(x)
 		reg=tcl.l2_regularizer(5e-4)
-		conv_init=tcl.variance_scaling_initializer()
+		conv_init=tcl.xavier_initializer()
 		if enc:
 			with tf.variable_scope('gen',reuse=reuse):
 				net=tcl.conv2d(net,20,5,1,'VALID',activation_fn=None,weights_initializer=conv_init,weights_regularizer=reg)

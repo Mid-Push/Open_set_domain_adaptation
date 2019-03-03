@@ -9,16 +9,14 @@ from preprocessing.preprocessing import preprocessing
 
 import math
 
-tf.app.flags.DEFINE_float('lr', 1e-3, 'Learning rate for adam optimizer')
+tf.app.flags.DEFINE_float('lr', '1e-3', 'Learning rate for adam optimizer')
 tf.app.flags.DEFINE_float('dropout_keep_prob', 0.5, 'Dropout keep probability')
 tf.app.flags.DEFINE_integer('num_epochs', 200, 'Number of epochs for training')
-tf.app.flags.DEFINE_integer('batch_size', 64, 'Batch size')
+tf.app.flags.DEFINE_integer('batch_size', 128, 'Batch size')
 tf.app.flags.DEFINE_string('net','small', '[small,large]')
 tf.app.flags.DEFINE_string('opt','mom', '[adam,mom]')
 tf.app.flags.DEFINE_string('train','mnist', '[mnist,usps,svshn]')
 tf.app.flags.DEFINE_string('test','usps', '[mnist,usps,svshn]')
-tf.app.flags.DEFINE_string('train_layers', 'fc8,fc7,fc6,conv5,conv4,conv3,conv2,conv1', 'Finetuning layers, seperated by commas')
-tf.app.flags.DEFINE_string('multi_scale', '256,257', 'As preprocessing; scale the image randomly between 2 numbers and crop randomly at networs input size')
 tf.app.flags.DEFINE_string('train_root_dir', '../training', 'Root directory to put the training data')
 tf.app.flags.DEFINE_integer('log_step', 10000, 'Logging period in terms of iteration')
 
